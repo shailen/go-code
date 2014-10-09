@@ -1,6 +1,9 @@
+#!/usr/bin/python
+
 import logging
 import re
 import urllib2
+import sys
 
 REGEX_IMPORT = 'IMPORT\(\s*\'(.*)\'\s*,\s*\'(.*)\'\s*\)'
 
@@ -44,10 +47,10 @@ class ImportFunction:
         return s[:s.rfind('\n')]
 
 
-def replace_import(file_name):
+def replace_import(file_name, output_file_name):
     if _includes_import(file_name):
         with open(file_name, 'r') as read_file:
-            with open(file_name.replace('.md', '') + '_parsed.md', 'w') as write_file:
+            with open(output_file_name, 'w') as write_file:
                 for line in read_file.readlines():
                     import_in_line = re.search(REGEX_IMPORT, line)
                     if import_in_line:
@@ -65,5 +68,6 @@ def _includes_import(file_name):
 
 
 if __name__ == '__main__':
-    replace_import('codelab.md')
+    print 'converting', sys.argv[1], 'to', sys.argv[2] 
+    replace_import(sys.argv[1], sys.argv[2])
 
