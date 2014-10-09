@@ -27,6 +27,7 @@ comment_chars_map = {
   '.html': '<!--'
 }
 
+"""Reads the contents of the markdown file."""
 def read_md_file(dirpath, filename):
     file_path = os.path.join(dirpath, filename)
     data[base_dir_path][os.path.basename(dirpath)] = {}
@@ -35,6 +36,9 @@ def read_md_file(dirpath, filename):
     return md
 
 
+"""Returns a list of IMPORTs in a markdown file. Each entry in the list is
+itself a two-item list, where the first item is the import path and second item
+is the name of the import tag."""
 def extract_import_tags(text):
     tags = []
     matches = re.finditer(IMPORT_REGEXP, text)
@@ -42,9 +46,15 @@ def extract_import_tags(text):
         tags.append([match.group(1), match.group(2)])
     return tags
 
+
+"""Makes a request to GitHub to get the file used in an IMPORT."""
 def fetch_import_code(path):
+    # TODO(shailen): add some error handling code.
     return requests.get(path).content
 
+
+"""Generates the string used in the regexp for getting the contents between
+BEGIN() and END() tags."""
 def get_begin_end_regexp_string(path, tag):
     file_suffix = os.path.splitext(path)[1]
     comment_chars = comment_chars_map[file_suffix]
@@ -53,6 +63,8 @@ def get_begin_end_regexp_string(path, tag):
         comment_chars, tag, comment_chars, tag)
 
 
+"""Gets code snippet defined by an IMPORT and ensures four spaces of leading
+whitespace required by markdown."""
 def get_code_snippet(match):
     snippet = match.group(1)
     snippet_lines = snippet.split('\n')
@@ -67,6 +79,8 @@ def get_code_snippet(match):
     )
 
 
+"""Reads content of a markdown file, substituting IMPORTS with code
+snippets, and returns the converted markdown."""
 def process_md_file_with_imports(dirpath, filename):
     md = read_md_file(dirpath, filename)
     # Assuming for now that all IMPORT tags use urls.
@@ -86,12 +100,15 @@ def process_md_file_with_imports(dirpath, filename):
     return md
 
 
+"""Generates the key, comprising of the org name and the repo name, used for
+storing repo data as JSON."""
 def get_org_and_repo(dirpath):
     repo = os.path.basename(dirpath)
     org = os.path.split(os.path.dirname(dirpath))[1]
     return os.path.join(org, repo)
 
 
+"""Generates the metadata and code for a repo as JSON."""
 def generate_data(base_dir_path):
   for dirpath, subdirs, filenames in os.walk(base_dir_path):
       for filename in filenames:
@@ -110,7 +127,7 @@ def generate_data(base_dir_path):
               key = get_org_and_repo(dirpath)
               data[base_dir_path][key] = metadata
               data[base_dir_path][key]['md'] = md
+          print(data)
 
 if __name__ == "__main__":
     generate_data(base_dir_path)
-
