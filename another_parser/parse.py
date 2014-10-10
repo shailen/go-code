@@ -10,13 +10,19 @@ REGEX_IMPORT = 'IMPORT\(\s*\'(.*)\'\s*,\s*\'(.*)\'\s*\)'
 
 
 class ImportFunction:
-    def __init__(self, file_path, tag_name, is_code_snippet=True):
+    def __init__(self, file_path, tag_name):
         self.file_path = file_path
         self.tag_name = tag_name
-        self.is_code_snippet = is_code_snippet
+        if file_path.endswith('.md'):
+            self.is_code_snippet = False
+        else:
+            self.is_code_snippet = True
 
     def extract_tagged_lines(self):
         contents = self.__get_file_contents()
+        if not contents:
+            return
+
         regex_string = 'BEGIN\(%s\)[^\n]*\n(.*)END\(%s\)[^\n]*\n' % (self.tag_name, self.tag_name)
         extracted = re.search(regex_string, contents, re.MULTILINE | re.DOTALL)
         if extracted:
@@ -31,10 +37,19 @@ class ImportFunction:
 
     def __get_file_contents(self):
         if self.file_path.startswith('https:') or self.file_path.startswith('http:'):
-            return urllib2.urlopen(self.file_path).read()
+            try:
+                return urllib2.urlopen(self.file_path).read()
+            except urllib2.HTTPError, e:
+                logging.warning(
+                    'Failed to fetch the contents of the URL %s. %s' % (self.file_path, e))
+
         else:
-            with open(self.file_path, 'r') as f:
-                return f.read()
+            if os.path.exists(self.file_path):
+                with open(self.file_path, 'r') as f:
+                    return f.read()
+            else:
+                logging.warning('File not found. Path %s' % self.file_path)
+
 
     @staticmethod
     def __make_code_snippet(contents):
@@ -61,7 +76,10 @@ def replace_import(file_name, output_file_name):
                             file_path_to_extract = import_in_line.group(1)
                         import_function = ImportFunction(file_path_to_extract, import_in_line.group(2))
                         extracted = import_function.extract_tagged_lines()
-                        write_file.write(extracted)
+                        if extracted:
+                            write_file.write(extracted)
+                        else:
+                            write_file.write(line)
                     else:
                         write_file.write(line)
 
